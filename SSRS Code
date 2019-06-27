@@ -1,0 +1,26 @@
+  WITH BI AS
+(
+--Selecting card number that matches employee number
+  SELECT BADGE_C.CARDNO, BADGE_V.BADGE_EMPLOYEE_NO
+  FROM BADGE_V 
+  INNER join BADGE_C ON BADGE_C.ID = BADGE_V.ID
+),
+empScans AS
+(
+--Selecting dates from the particular location 
+SELECT EVNT_DAT, LOCATION, CARDNO, FNAME, LNAME, PANEL_DESCRP
+FROM EV_LOG
+WHERE (EV_LOG.[EVNT_DAT] > GETDATE() - 7)
+AND (EVNT_DAT is not null)
+AND (LNAME IS NOT NULL)
+AND (UPPER (PANEL_DESCRP) LIKE @CityLocation)
+GROUP BY CARDNO, LOCATION, FNAME, LNAME, EVNT_DAT, PANEL_DESCRP
+)
+--Selecting everything from EmpScans and joining it with BI. Also getting the
+--most recent date to join with the correct location
+SELECT * FROM empScans
+INNER JOIN BI on BI.cardno = empScans.CARDNO
+WHERE (EVNT_DAT = (SELECT MAX(EVNT_DAT) FROM empScans WHERE empScans.CARDNO = BI.CARDNO
+AND EVNT_DAT < @EndDate
+AND EVNT_DAT > @StartDate)) 
+ORDER BY LNAME ASC
